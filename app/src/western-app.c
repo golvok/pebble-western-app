@@ -6,6 +6,7 @@
 
 #include <pebble.h>
 #include <math.h>
+#include <inttypes.h>
 
 #define TAP_NOT_DATA true
 
@@ -16,8 +17,7 @@ static void main_window_load(Window *window);
 static void main_window_unload(Window *window);
 static void init();
 static void deinit();
-static int16_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z);
-
+static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z);
 
 
 static void data_handler(AccelData *data, uint32_t num_samples) {
@@ -25,20 +25,27 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
 	static char s_buffer[128];
 
 	// Compose string of all data
+	// snprintf(s_buffer, sizeof(s_buffer), 
+	// 	"N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
+	// 	data[0].x, data[0].y, data[0].z, 
+	// 	data[1].x, data[1].y, data[1].z, 
+	// 	data[2].x, data[2].y, data[2].z
+	// );
+
 	snprintf(s_buffer, sizeof(s_buffer), 
-		"N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
-		data[0].x, data[0].y, data[0].z, 
-		data[1].x, data[1].y, data[1].z, 
-		data[2].x, data[2].y, data[2].z
+		"Abs acceleration\n%"PRIu32"\n%"PRIu32"\n%"PRIu32"", 
+		get_absolute_acceleration(data[0].x, data[0].y, data[0].z), 
+		get_absolute_acceleration(data[1].x, data[1].y, data[1].z), 
+		get_absolute_acceleration(data[2].x, data[2].y, data[2].z)
 	);
 
 	//Show the data
 	text_layer_set_text(s_output_layer, s_buffer);
 }
 
-static int16_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z){
+static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z){
 
-	return -1;
+	return (x*x + y*y + z*z)/1000;
 }
 
 static void main_window_load(Window *window) {
