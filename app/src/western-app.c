@@ -20,25 +20,47 @@ static void deinit();
 static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z);
 
 uint32_t points_examined = 0;
+uint16_t n_spikes = 0;
+#define SAMPLE_SIZE 10
+#define NUMBER_OF_SAMPLE 15
+// there will be a SAMPLE_SIZE * NUMBER_OF_SAMPLE points
+#define SPIKE_THRESHOLD 20
 
 static void data_handler(AccelData *data, uint32_t num_samples) {
 	// Long lived buffer
 	static char s_buffer[128];
+	points_examined++;
 
-	// Compose string of all data
-	// snprintf(s_buffer, sizeof(s_buffer), 
-	// 	"N X,Y,Z\n0 %d,%d,%d\n1 %d,%d,%d\n2 %d,%d,%d", 
-	// 	data[0].x, data[0].y, data[0].z, 
-	// 	data[1].x, data[1].y, data[1].z, 
-	// 	data[2].x, data[2].y, data[2].z
+	// snprintf(s_buffer, sizeof(s_buffer),
+	// 	"%"PRIu32"\n%"PRIu32"\n%"PRIu32"\n%"PRIu32"\n%"PRIu32"\n",
+	// 	get_absolute_acceleration(data[0].x, data[0].y, data[0].z),
+	// 	get_absolute_acceleration(data[1].x, data[1].y, data[1].z),
+	// 	get_absolute_acceleration(data[2].x, data[2].y, data[2].z),
+	// 	get_absolute_acceleration(data[3].x, data[3].y, data[3].z),
+	// 	get_absolute_acceleration(data[4].x, data[4].y, data[4].z)
 	// );
 
-	snprintf(s_buffer, sizeof(s_buffer), 
-		"Abs acceleration\n%"PRIu32"\n%"PRIu32"\n%"PRIu32"", 
-		get_absolute_acceleration(data[0].x, data[0].y, data[0].z), 
-		get_absolute_acceleration(data[1].x, data[1].y, data[1].z), 
-		get_absolute_acceleration(data[2].x, data[2].y, data[2].z)
-	);
+	uint32_t i;
+	for (i = 0; i < num_samples; i++) {
+		uint32_t accel = get_absolute_acceleration(data[i].x, data[i].y, data[i].z);
+		if (accel > 2000 || accel < 500) {
+			n_spikes++;
+		}		
+	}
+
+	uint16_t n_printed = snprintf(s_buffer, sizeof(s_buffer), 
+		"points: \n%"PRIu32"\nspikes: %"PRIu16"\n", 
+		points_examined,
+		n_spikes
+	); 
+
+	if (points_examined == NUMBER_OF_SAMPLE) {
+		if (n_spikes > SPIKE_THRESHOLD) {
+			snprintf(s_buffer + n_printed, sizeof(s_buffer) - n_printed, "ALERT!!!");
+		}
+		points_examined = 0;
+		n_spikes = 0;
+	}
 
 	//Show the data
 	text_layer_set_text(s_output_layer, s_buffer);
@@ -76,7 +98,7 @@ static void init() {
 	window_stack_push(s_main_window, true);
 
 	// Subscribe to the accelerometer data service
-	int num_samples = 10;
+	int num_samples = SAMPLE_SIZE;
 	accel_data_service_subscribe(num_samples, data_handler);
 
 	// Choose update rate
