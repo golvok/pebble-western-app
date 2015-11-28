@@ -19,6 +19,7 @@ static void init();
 static void deinit();
 static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z);
 
+uint32_t points_examined = 0;
 
 static void data_handler(AccelData *data, uint32_t num_samples) {
 	// Long lived buffer
@@ -75,7 +76,7 @@ static void init() {
 	window_stack_push(s_main_window, true);
 
 	// Subscribe to the accelerometer data service
-	int num_samples = 3;
+	int num_samples = 10;
 	accel_data_service_subscribe(num_samples, data_handler);
 
 	// Choose update rate
