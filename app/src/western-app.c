@@ -18,15 +18,25 @@ static void main_window_unload(Window *window);
 static void init();
 static void deinit();
 static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z);
+static void send_int(int key, int value);
+static void main_window_unload(Window *window);
+static void inbox_received_callback(DictionaryIterator *iterator, void *context);
+static void inbox_dropped_callback(AppMessageResult reason, void *context);
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context);
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context);
 
 uint32_t points_examined = 0;
 uint16_t n_spikes = 0;
+
 #define SAMPLE_SIZE 10
 #define NUMBER_OF_SAMPLE 15
 // there will be a SAMPLE_SIZE * NUMBER_OF_SAMPLE points
 #define SPIKE_THRESHOLD 20
+#define KEY_DATA 5
+#define SEND_KEY 78
 
 static void data_handler(AccelData *data, uint32_t num_samples) {
+
 	// Long lived buffer
 	static char s_buffer[128];
 	points_examined++;
@@ -57,6 +67,8 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
 	if (points_examined == NUMBER_OF_SAMPLE) {
 		if (n_spikes > SPIKE_THRESHOLD) {
 			snprintf(s_buffer + n_printed, sizeof(s_buffer) - n_printed, "ALERT!!!");
+
+			send_int(SEND_KEY,4);
 		}
 		points_examined = 0;
 		n_spikes = 0;
@@ -69,6 +81,16 @@ static void data_handler(AccelData *data, uint32_t num_samples) {
 static uint32_t get_absolute_acceleration(int16_t x, int16_t y, int16_t z){
 
 	return (x*x + y*y + z*z)/1000;
+}
+
+static void send_int(int key, int value) {
+	// Open AppMessage with sensible buffer sizes
+	app_message_open(64, 64);
+	DictionaryIterator *iter;
+	app_message_outbox_begin(&iter);
+	dict_write_int(iter, key, &value, sizeof(int), true);
+	dict_write_end(iter);
+	app_message_outbox_send();
 }
 
 static void main_window_load(Window *window) {
@@ -88,6 +110,22 @@ static void main_window_unload(Window *window) {
 	text_layer_destroy(s_output_layer);
 }
 
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Message received!");
+}
+
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
 static void init() {
 	// Create main Window
 	s_main_window = window_create();
@@ -103,6 +141,12 @@ static void init() {
 
 	// Choose update rate
 	accel_service_set_sampling_rate(ACCEL_SAMPLING_10HZ);
+
+	// Register callbacks
+	// app_message_register_inbox_received(inbox_received_callback);
+	// app_message_register_inbox_dropped(inbox_dropped_callback);
+	// app_message_register_outbox_failed(outbox_failed_callback);
+	// app_message_register_outbox_sent(outbox_sent_callback);
 }
 
 static void deinit() {
