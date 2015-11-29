@@ -74,15 +74,26 @@ public class BazoogaMainActivity extends AppCompatActivity {
 
             @Override
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
-                Log.i(getLocalClassName(), "Received value=" + data.getInteger(MESSAGE_TYPE_KEY) + " for key: " + Integer.toString(MESSAGE_TYPE_KEY));
+                long cycles = data.getInteger(MESSAGE_TYPE_KEY);
+                Log.i(getLocalClassName(), "Received value=" + cycles + " for key: " + Integer.toString(MESSAGE_TYPE_KEY));
 
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
+
+                long total_seconds = cycles;
+                long minutes = total_seconds/60;
+                long seconds_past_the_minute = total_seconds % 60;
 
                 TelephonyManager tMgr = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
                 String phoneNumber = tMgr.getLine1Number();
 
+                String message = "Your child has been continuously active for ";
+                if (minutes > 0) {
+                    message += Long.toString(minutes) + "m ";
+                }
+                message += Long.toString(seconds_past_the_minute) + "s";
+
                 SmsManager sms = SmsManager.getDefault();
-                sms.sendTextMessage(phoneNumber, null, "CALM YOUR KID!", null, null);
+                sms.sendTextMessage(phoneNumber, null, message, null, null);
             }
         });
     }
