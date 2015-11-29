@@ -1,13 +1,18 @@
 package golvok.bazooga;
 
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.telephony.SmsManager;
+import android.telephony.TelephonyManager;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
@@ -16,11 +21,17 @@ import android.view.MenuItem;
 import com.getpebble.android.kit.PebbleKit;
 import com.getpebble.android.kit.util.PebbleDictionary;
 
+import java.io.IOException;
 import java.util.UUID;
 
 public class BazoogaMainActivity extends AppCompatActivity {
 
+    private final static String TWILLO_APP_SID = "APe8b5c9643269c95f4aa0faba695382ab";
+    private final static String TWILLO_ACCOUNT_SID = "ACa397147b63109ee05368f637c3917fc5";
+    private final static String TWILLO_AUTH_TOKEN = "86575c5ddbd9f46a3d6f3174c9cabd12";
+
     private final static UUID PEBBLE_APP_UUID = UUID.fromString("ce5606be-6fdf-43c4-9882-c4ad5bb949d2");
+    private final static int MESSAGE_TYPE_KEY = 78;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,11 +74,16 @@ public class BazoogaMainActivity extends AppCompatActivity {
 
             @Override
             public void receiveData(final Context context, final int transactionId, final PebbleDictionary data) {
-                Log.i(getLocalClassName(), "Received value=" + data.getUnsignedIntegerAsLong(0) + " for key: 0");
+                Log.i(getLocalClassName(), "Received value=" + data.getInteger(MESSAGE_TYPE_KEY) + " for key: " + Integer.toString(MESSAGE_TYPE_KEY));
 
                 PebbleKit.sendAckToPebble(getApplicationContext(), transactionId);
-            }
 
+                TelephonyManager tMgr = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
+                String phoneNumber = tMgr.getLine1Number();
+
+                SmsManager sms = SmsManager.getDefault();
+                sms.sendTextMessage(phoneNumber, null, "CALM YOUR KID!", null, null);
+            }
         });
     }
 
